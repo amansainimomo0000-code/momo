@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Infinite Garden</title>
+<style>
+  /* Base reset */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    width: 100vw; height: 100vh; overflow: hidden;
+    background: #000;
+    font-family: 'Georgia', serif;
+    color: #fff;
+  }
+  
+  /* Iframe container */
+  #viewer {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    border: none;
+    opacity: 0;
+    transition: opacity 1.5s ease;
+    pointer-events: none; /* until active */
+    z-index: 1;
+  }
+  #viewer.active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  
+  /* UI Overlay */
+  #gallery {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at center, #2a0815 0%, #0d0106 60%, #000000 100%);
+    z-index: 10;
+    transition: opacity 1s ease, transform 1s cubic-bezier(0.19, 1, 0.22, 1);
+  }
+  
+  #gallery.hidden {
+    opacity: 0;
+    transform: scale(1.1);
+    pointer-events: none;
+  }
+
+  h1 {
+    font-size: 3.5rem;
+    font-weight: 300;
+    letter-spacing: 6px;
+    margin-bottom: 3rem;
+    background: linear-gradient(45deg, #ffd6e0, #ff8fa3, #ff4d6d);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 0 30px rgba(255,143,163,0.3);
+    animation: float 5s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-12px); }
+  }
+
+  .bunch-action-btn {
+    background: linear-gradient(135deg, #ff4d6d, #c9184a);
+    color: white;
+    font-size: 1.5rem;
+    font-family: 'Georgia', serif;
+    padding: 18px 40px;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    margin-bottom: 2rem;
+    box-shadow: 0 10px 25px rgba(255, 77, 109, 0.4), inset 0 0 10px rgba(255,255,255,0.3);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+    letter-spacing: 2px;
+  }
+  
+  .bunch-action-btn::after {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+    transition: 0.5s;
+    z-index: -1;
+  }
+
+  .bunch-action-btn:hover {
+    transform: translateY(-5px) scale(1.05);
+    box-shadow: 0 15px 35px rgba(255, 77, 109, 0.6), inset 0 0 15px rgba(255,255,255,0.5);
+  }
+  
+  .bunch-action-btn:hover::after {
+    left: 100%;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2.5rem;
+    max-width: 1000px;
+    padding: 2rem;
+  }
+
+  @media (max-width: 850px) {
+    .grid { grid-template-columns: repeat(2, 1fr); gap: 2rem; }
+    h1 { font-size: 2.5rem; }
+  }
+  @media (max-width: 500px) {
+    .grid { grid-template-columns: 1fr; gap: 1.5rem; }
+    h1 { font-size: 2rem; }
+  }
+
+  .card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    backdrop-filter: blur(12px);
+    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 50%; height: 100%;
+    background: linear-gradient(to right, transparent, rgba(255,255,255,0.15), transparent);
+    transform: skewX(-25deg);
+    transition: 0.6s;
+  }
+
+  .card:hover {
+    transform: translateY(-12px) scale(1.05);
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 143, 163, 0.5);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.6), 0 0 25px rgba(255,143,163,0.25);
+  }
+
+  .card:hover::before {
+    left: 200%;
+  }
+
+  .card h2 {
+    font-size: 1.3rem;
+    font-weight: normal;
+    letter-spacing: 3px;
+    color: #ffe5ec;
+  }
+
+  /* Back button */
+  #back-btn {
+    position: absolute;
+    top: 30px;
+    left: 30px;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #fff;
+    padding: 12px 24px;
+    border-radius: 30px;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    z-index: 20;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.4s ease;
+    font-family: 'Georgia', serif;
+    font-size: 1rem;
+    letter-spacing: 2px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  }
+
+  #back-btn.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  #back-btn:hover {
+    background: rgba(255,255,255,0.1);
+    border-color: rgba(255, 143, 163, 0.8);
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.5), 0 0 15px rgba(255,143,163,0.3);
+  }
+</style>
+</head>
+<body>
+
+<!-- Interactive iframe to load chosen flower aesthetic -->
+<iframe id="viewer" src="about:blank"></iframe>
+
+<!-- Navigation back to gallery -->
+<button id="back-btn">← Garden</button>
+
+<!-- Main Hub Overlay -->
+<div id="gallery">
+  <h1>The Infinite Garden</h1>
+  <button class="bunch-action-btn" data-src="flower_bunch.html" data-song="song/timro_pratiksha.mp3">Flower Bunch 💖</button>
+  <div class="grid">
+    <div class="card" data-src="lilyperfect.html" data-song="song/darshana.mp3"><h2>Lily Perfect 🌿</h2></div>
+    <div class="card" data-src="roseaesthetics.html" data-song="song/i_wanna_be_yours.mp3"><h2>Rose Aesthetics 🌹</h2></div>
+    <div class="card" data-src="the perfect sunflower.html" data-song="song/love_me_not (1).mp3"><h2>The Sunflower 🌻</h2></div>
+    <div class="card" data-src="tulip.html" data-song="song/love_story_indila.mp3"><h2>Tulips for Her 🌷</h2></div>
+    <div class="card" data-src="theaesthetics.html" data-song="song/perfect.mp3"><h2>The Aesthetics ✨</h2></div>
+    <div class="card" data-src="lotus_magic.html" data-song="song/dandelions.mp3"><h2>Lotus Magic 🌺💖</h2></div>
+  </div>
+</div>
+
+<script>
+  const gallery = document.getElementById('gallery');
+  const viewer = document.getElementById('viewer');
+  const backBtn = document.getElementById('back-btn');
+  const cards = document.querySelectorAll('.card, .bunch-action-btn');
+  let currentAudio = null;
+
+  cards.forEach(card => {
+    card.addEventListener('click', () => {
+      const src = card.getAttribute('data-src');
+      const songSrc = card.getAttribute('data-song');
+      viewer.src = src; // load iframe
+      
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.currentTime = 0;
+      }
+      if (songSrc) {
+        currentAudio = new Audio(songSrc);
+        currentAudio.loop = true;
+        currentAudio.play().catch(e => console.log('Audio autoplay prevented:', e));
+      }
+      
+      // fade out gallery
+      gallery.classList.add('hidden');
+      
+      // fade in viewer & button
+      setTimeout(() => {
+        viewer.classList.add('active');
+        backBtn.classList.add('visible');
+      }, 600);
+    });
+  });
+
+  backBtn.addEventListener('click', () => {
+    // fade out viewer & button
+    viewer.classList.remove('active');
+    backBtn.classList.remove('visible');
+    
+    // smooth audio fade out
+    if (currentAudio) {
+      let vol = currentAudio.volume;
+      const fadeOut = setInterval(() => {
+        if (vol > 0.05) {
+          vol -= 0.05;
+          currentAudio.volume = vol;
+        } else {
+          clearInterval(fadeOut);
+          currentAudio.pause();
+          currentAudio.currentTime = 0;
+          currentAudio = null;
+        }
+      }, 50);
+    }
+    
+    // fade in gallery
+    setTimeout(() => {
+      gallery.classList.remove('hidden');
+      // clear iframe to stop background renders and save memory
+      setTimeout(() => {
+        viewer.src = 'about:blank'; 
+      }, 1000);
+    }, 600);
+  });
+</script>
+
+</body>
+</html>
